@@ -13,10 +13,17 @@ export async function entrar(form:FormData){
   const admin=administrativo();
   const {data:permitido,error:limite}=await admin.rpc('reservar_tentativa_login',{p_chave:rg});
   if(limite||!permitido)redirect('/entrar?erro=Aguarde+15+minutos+antes+de+tentar+novamente.');
-  const {data:p}=await admin.from('perfis').select('id,ativo,senha_pendente').eq('rg_login',rg).maybeSingle();
+  const {data:p}=await admin.from('perfis').select('id,ativo,senha_pendente,redefinir_ao_entrar').eq('rg_login',rg).maybeSingle();
   if(!p?.ativo)redirect(falha);
   const {data:{user}}=await admin.auth.admin.getUserById(p.id);
   if(!user?.email)redirect(falha);
+  if(p.redefinir_ao_entrar){
+   if(!p.senha_pendente||normalizarRg(senha)!==rg)redirect(falha);
+   const {error:restauracao}=await admin.auth.admin.updateUserById(p.id,{password:senhaInicial(rg)});
+   if(restauracao)redirect('/entrar?erro=Não+foi+possível+restaurar+o+acesso.+Procure+a+administração.');
+   const {error:registro}=await admin.from('perfis').update({redefinir_ao_entrar:false}).eq('id',p.id);
+   if(registro)redirect('/entrar?erro=Restauração+pendente.+Tente+novamente.');
+  }
   const password=p.senha_pendente&&normalizarRg(senha)===rg?senhaInicial(rg):senha;
   const db=await banco();const {error}=await db.auth.signInWithPassword({email:user.email,password});
   if(error)redirect(falha);
