@@ -16,7 +16,7 @@ test('primeiro acesso bloqueia dados e RPCs; apenas gestor SAD administra; reset
  create function auth.jwt() returns jsonb language sql stable as $$select jsonb_build_object('iat',coalesce(nullif(current_setting('request.jwt.claim.iat',true),''),'2000000000')::bigint)$$;
  create function auth.role() returns text language sql stable as $$select coalesce(nullif(current_setting('request.jwt.claim.role',true),''),'authenticated')$$;
  grant usage on schema auth to authenticated;grant execute on all functions in schema auth to authenticated;`);
- for(const arquivo of ['001_base.sql','003_cadastro_estruturado.sql','004_acesso_rg.sql'])await db.exec(await readFile(new URL('../supabase/migrations/'+arquivo,import.meta.url),'utf8'));
+ for(const arquivo of ['001_base.sql','003_cadastro_estruturado.sql','004_acesso_rg.sql','005_restauracao_administrativa.sql'])await db.exec(await readFile(new URL('../supabase/migrations/'+arquivo,import.meta.url),'utf8'));
  const ids=['00000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000002','00000000-0000-0000-0000-000000000003'];
  for(let i=0;i<ids.length;i++){
  await db.query('insert into auth.users values($1,$2)',[ids[i],`teste${i}@example.test`]);
@@ -29,6 +29,7 @@ test('primeiro acesso bloqueia dados e RPCs; apenas gestor SAD administra; reset
  assert.equal((await db.query('select count(*)::int n from public.perfis')).rows[0].n,1);
  await assert.rejects(()=>db.query("select public.atualizar_meu_cadastro('21999999999','Rua','a@example.test')"));
  assert.equal((await db.query("update public.perfis set senha_pendente=false returning id")).rows.length,0);
+ assert.equal((await db.query("update public.perfis set redefinir_ao_entrar=true returning id")).rows.length,0);
  await assert.rejects(()=>db.query("select public.reservar_tentativa_login('53373')"));
  await como(1);assert.equal((await db.query('select public.pode_gerir_efetivo() ok')).rows[0].ok,false);
  await como(0);assert.equal((await db.query('select public.pode_gerir_efetivo() ok')).rows[0].ok,true);
