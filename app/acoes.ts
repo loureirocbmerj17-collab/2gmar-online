@@ -2,12 +2,28 @@
 import {banco,contexto} from '@/lib/supabase';
 import {redirect} from 'next/navigation';
 import {revalidatePath} from 'next/cache';
+import {administrativo,senhaInicial} from '@/lib/admin';
+import {normalizarRg} from '@/lib/acesso.mjs';
 export async function entrar(form:FormData){
- const email=String(form.get('email')||'').trim();const password=String(form.get('senha')||'');
- if(!email||!password)redirect('/entrar?erro=Preencha+e-mail+e+senha');
- const db=await banco();const {error}=await db.auth.signInWithPassword({email,password});
- if(error)redirect('/entrar?erro=Não+foi+possível+entrar.+Confira+seus+dados.');
- redirect('/');
+ const rg=normalizarRg(form.get('rg'));const senha=String(form.get('senha')||'');
+ const falha='/entrar?erro=Não+foi+possível+entrar.+Confira+RG+e+senha+ou+procure+a+SAD.';
+ if(!rg||!senha||senha.length>128)redirect(falha);
+ let destino='/';
+ try{
+  const admin=administrativo();
+  const {data:permitido,error:limite}=await admin.rpc('reservar_tentativa_login',{p_chave:rg});
+  if(limite||!permitido)redirect('/entrar?erro=Aguarde+15+minutos+antes+de+tentar+novamente.');
+  const {data:p}=await admin.from('perfis').select('id,ativo,senha_pendente').eq('rg_login',rg).maybeSingle();
+  if(!p?.ativo)redirect(falha);
+  const {data:{user}}=await admin.auth.admin.getUserById(p.id);
+  if(!user?.email)redirect(falha);
+  const password=p.senha_pendente&&normalizarRg(senha)===rg?senhaInicial(rg):senha;
+  const db=await banco();const {error}=await db.auth.signInWithPassword({email:user.email,password});
+  if(error)redirect(falha);
+  await admin.from('tentativas_login').delete().eq('chave',rg);
+  destino=p.senha_pendente?'/senha':'/';
+ }catch(e){if(e&&typeof e==='object'&&'digest' in e)throw e;redirect('/entrar?erro=Acesso+indisponível.+Procure+a+SAD.');}
+ redirect(destino);
 }
 export async function sair(){const db=await banco();await db.auth.signOut();redirect('/entrar');}
 export async function atualizarCadastro(form:FormData){
