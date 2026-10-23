@@ -16,7 +16,7 @@ test('primeiro acesso bloqueia dados e RPCs; apenas gestor SAD administra; reset
  create function auth.jwt() returns jsonb language sql stable as $$select jsonb_build_object('iat',coalesce(nullif(current_setting('request.jwt.claim.iat',true),''),'2000000000')::bigint)$$;
  create function auth.role() returns text language sql stable as $$select coalesce(nullif(current_setting('request.jwt.claim.role',true),''),'authenticated')$$;
  grant usage on schema auth to authenticated;grant execute on all functions in schema auth to authenticated;`);
- for(const arquivo of ['001_base.sql','003_cadastro_estruturado.sql','004_acesso_rg.sql','005_restauracao_administrativa.sql'])await db.exec(await readFile(new URL('../supabase/migrations/'+arquivo,import.meta.url),'utf8'));
+ for(const arquivo of ['001_base.sql','003_cadastro_estruturado.sql','004_acesso_rg.sql','005_restauracao_administrativa.sql','006_base_efetivo_sad.sql'])await db.exec(await readFile(new URL('../supabase/migrations/'+arquivo,import.meta.url),'utf8'));
  const ids=['00000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000002','00000000-0000-0000-0000-000000000003'];
  for(let i=0;i<ids.length;i++){
  await db.query('insert into auth.users values($1,$2)',[ids[i],`teste${i}@example.test`]);
