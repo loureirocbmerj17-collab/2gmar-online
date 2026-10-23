@@ -1,0 +1,2 @@
+import {contexto} from '@/lib/supabase';import {redirect} from 'next/navigation';import {Estrutura} from '@/componentes/estrutura';import {ImportarEfetivo} from '@/componentes/importar-efetivo';
+export default async function Importar(){const {db,user,perfil}=await contexto();if(!user||!perfil?.ativo)redirect('/entrar');const {data:pode}=await db.rpc('pode_gerir_efetivo');if(!pode)redirect('/');return <Estrutura nome={perfil.nome_guerra}><h1>Importação do efetivo</h1><ImportarEfetivo/></Estrutura>;}
