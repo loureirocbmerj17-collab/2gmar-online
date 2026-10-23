@@ -36,5 +36,6 @@ export async function redefinirSenha(form:FormData){
  if(preparo)redirect('/efetivo?erro=Não+foi+possível+preparar+a+redefinição.');
  const {error}=await admin.auth.admin.updateUserById(id,{password:senhaInicial(alvo.rg_login)});
  if(error)redirect('/efetivo?erro=Conta+bloqueada+para+troca,+mas+a+redefinição+falhou.+Tente+novamente.');
+ await admin.from('tentativas_login').delete().in('chave',[alvo.rg_login,'senha:'+id]);
  revalidatePath('/efetivo');redirect('/efetivo?ok=Senha+redefinida+para+o+RG.+O+militar+deverá+escolher+uma+nova+senha+ao+entrar.');
 }
